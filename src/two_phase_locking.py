@@ -295,35 +295,19 @@ class TwoPhaseLock:
                         else:
                             print("Action: Not executed. Instruction added to queue")
 
-            # self.print_queue()
-            # self.print_locks()
-            # self.print_waiting_list()
-            # self.print_executed()
-            # print("===============================")
-
-            # print(self.schedule.rollbacked_list)
-            # print(f"{current_instruction.type}\t{current_instruction.item}\tT{current_instruction.transaction_id}\t", end='')
-            # print(f"acquire {self.locks[current_instruction]} for {current_instruction.item} on {current_instruction.transaction_id}" if (current_instruction.type=='read' or current_instruction.type=='write') else "")
-        
         self.print_executed()
 
 if __name__ == '__main__':
     print('Two Phase Locking')
     print("===============================")
-    print('Input your schedule:')
-    sequence = input()
-    print("===============================")
-    # input_pattern = re.compile(r'^[RW]\d+\([A-Z]\);?(?:[C]\d+;?)*$')
     
-    # while (not input_pattern.match(sequence)):
-    #     sequence = input()
+    is_valid = False
+    while (not is_valid):
+        print("Input your schedule:")
+        sequence = input()
+        print("===============================")
+        is_valid = re.search("^(?:[RW]\d+\([A-Z]\)|C\d+)(?:;(?:[RW]\d+\([A-Z]\)|C\d+))*$", sequence)
 
     locking = TwoPhaseLock(sequence)
-    # for ins in list(locking.schedule.instructions.queue):
-    #     print(f'{ins.type} {ins.item} in transaction {ins.transaction_id}')
 
     locking.run()
-    # sample = Instruction("R1(A)")
-    # locking.add_to_queue(sample)
-    # locking.add_to_queue(sample)
-    # locking.print_queue()
