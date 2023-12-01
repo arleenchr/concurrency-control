@@ -34,7 +34,7 @@ class TransactionOCC(Transaction):
         return True
 
 
-    def commit() -> None:
+    def commit(self) -> None:
         self.finish_ts = time.time()
 
 
