@@ -56,7 +56,7 @@ class TwoPhaseLock:
             is_s_lock_avail = self.check_lock_avail('s_lock', instruction.item, instruction.transaction_id)
             if (not is_s_lock_avail[0]):
                 # lock not avail
-                self.instruction_queue.appendleft(instruction)
+                self.instruction_queue.append(instruction)
                 if (instruction.transaction_id not in self.waiting_list[is_s_lock_avail[1]]):
                     self.waiting_list[is_s_lock_avail[1]].append(instruction.transaction_id)
                 # print(f"s_lock not granted.")
@@ -68,7 +68,7 @@ class TwoPhaseLock:
             is_x_lock_avail = self.check_lock_avail('x_lock', instruction.item, instruction.transaction_id)
             if (not is_x_lock_avail[0]):
                 # lock not avail
-                self.instruction_queue.appendleft(instruction)
+                self.instruction_queue.append(instruction)
                 if (instruction.transaction_id not in self.waiting_list[is_x_lock_avail[1]]):
                     self.waiting_list[is_x_lock_avail[1]].append(instruction.transaction_id)
                 # print(f"x_lock not granted.")
