@@ -1,57 +1,42 @@
 from queue import Queue
+from transaction import Transaction
+from transaction_occ import TransactionOCC
+from instruction import Instruction
+from typing import List
 
-class Instruction:
-    def __init__ (self, transaction_id, item, type):
-        self.transaction_id = transaction_id # int, e.g: 1 for T1
-        self.item = item # data item, e.g: item A in R(A)
-        self.type = type # read, write, commit, abort
 
-    def __init__(self, input_sequence):
-        # input_sequence: Rx(A) / Wx(A) / Cx
-        if (input_sequence[0]=='R'):
-            self.type = 'read'
-            self.transaction_id = input_sequence[1]
-            self.item = input_sequence[3]
-        elif (input_sequence[0]=='W'):
-            self.type = 'write'
-            self.transaction_id = input_sequence[1]
-            self.item = input_sequence[3]
-        elif (input_sequence[0]=='C'):
-            self.type = 'commit'
-            self.transaction_id = input_sequence[1]
-            self.item = ''
-        
-    def __str__(self):
-        result = ''
-        if (self.type=='read'):
-            result += (f"R{self.transaction_id}({self.item})")
-        elif (self.type=='write'):
-            result += (f"W{self.transaction_id}({self.item})")
-        elif (self.type=='commit'):
-            result += (f"C{self.transaction_id}")
-        return result
-
-class Schedule:
-    def __init__ (self):
-        self.instructions = Queue() # list (queue) of instructions
-        self.rollbacked_list = [] # list of transactions rollbacked
-        self.logging = Queue() # list (queue) of final schedule
-        
-    def __init__ (self, input_sequence):
+class Schedule:        
+    def __init__ (self, input_sequence:str, type:str='base'):
         self.instructions = Queue() # list (queue) of instructions
         self.rollbacked_list = [] # list of transactions rollbacked
         self.logging = Queue() # list (queue) of final schedule
         # input_sequence: Rx(A);Wx(A);Cx;Rx(B);Cx
         input_list = input_sequence.split(";")
+        temp_transactions = {}
         for input in input_list:
             input_instruction = Instruction(input)
             self.instructions.put(input_instruction)
+            if(input_instruction.transaction_id not in temp_transactions.keys()):
+                temp_transactions.update({input_instruction.transaction_id: []})
+            temp_transactions[input_instruction.transaction_id].append(input_instruction)
+
+        self.transactions = []
+        for tid, tins in temp_transactions.items:
+            if(type == 'base'):
+                transaction = Transaction(tid, tins)
+            elif(type == 'occ'):
+                transaction = TransactionOCC(tid, tins)
+
+    
+    def add_transaction(self, transaction: Transaction) -> None:
+        self.transactions.append(transaction)
 
     def add_instruction(self, instruction):
         self.instructions.put(instruction)
 
     def rollback(self, transaction_id):
         self.rollbacked_list.append(transaction_id)
+
 
     def execute_instruction(self):
         instruction = self.instructions.get()
