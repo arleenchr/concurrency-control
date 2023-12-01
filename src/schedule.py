@@ -59,6 +59,26 @@ class Schedule:
             if (instruction.transaction_id == transaction_id):
                 logged.append(instruction)
         return logged
+    
+    def get_instructions(self, transaction_id):
+        instructions = []
+        for ins in list(self.instructions.queue):
+            if (ins.transaction_id == transaction_id):
+                instructions.append(ins)
+        return instructions
+    
+    def remove_instructions(self, transaction_id):
+        for _ in range(len(self.instructions.queue)):
+            ins = self.instructions.get()
+            if (ins.transaction_id != transaction_id):
+                self.instructions.put(ins)
+    
+    def restore_instruction(self, instruction):
+        # put instruction to the first element of self.instructions
+        self.add_instruction(instruction)
+        for _ in range(self.instructions.qsize()-1):
+            curr = self.instructions.get()
+            self.add_instruction(curr)
 
 
 if __name__ == '__main__':
