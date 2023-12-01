@@ -14,9 +14,11 @@ class TwoPhaseLock:
         self.executed = []
         
     def add_schedule_instruction(self, instruction):
+        # apend instruction to schedule
         self.schedule.add_instruction(instruction)
 
     def execute_instruction(self):
+        # execute current instruction
         return self.schedule.execute_instruction()
     
     def check_lock_avail(self, lock_type, item, transaction_id):
@@ -37,22 +39,25 @@ class TwoPhaseLock:
         if (instruction.type=='read'):
             is_s_lock_avail = self.check_lock_avail('s_lock', instruction.item, instruction.transaction_id)
             if (not is_s_lock_avail[0]):
-                # lock not avail
+                # lock not avail, add to queue and waiting list
                 self.instruction_queue.append(instruction)
                 if (instruction.transaction_id not in self.waiting_list[is_s_lock_avail[1]]):
                     self.waiting_list[is_s_lock_avail[1]].append(instruction.transaction_id)
                 return False
+            # else, acquire lock
             self.locks[instruction] = 's_lock'
 
         elif (instruction.type=='write'):
             is_x_lock_avail = self.check_lock_avail('x_lock', instruction.item, instruction.transaction_id)
             if (not is_x_lock_avail[0]):
-                # lock not avail
+                # lock not avail, add to queue and waiting list
                 self.instruction_queue.append(instruction)
                 if (instruction.transaction_id not in self.waiting_list[is_x_lock_avail[1]]):
                     self.waiting_list[is_x_lock_avail[1]].append(instruction.transaction_id)
                 return False
+            # else, acquire lock
             self.locks[instruction] = 'x_lock'
+            # automatic upgrade lock from s_lock to x_lock
             for ins,lock in self.locks.items():
                 if (lock=='s_lock' and ins.transaction_id==instruction.transaction_id and ins.item==instruction.item):
                     self.release_lock(ins)
@@ -60,17 +65,19 @@ class TwoPhaseLock:
         return True
 
     def release_lock(self, instruction):
+        # release lock
         self.locks.pop(instruction)
 
     def commit(self, instruction):
-        # check queue dulu
+        # commit, if not available then add to queue
         if (not self.check_commit_avail(instruction.transaction_id)):
             self.add_to_queue(instruction)
             return False
-        
         return True
 
     def check_commit_avail(self, transaction_id):
+        # check if commit can be executed
+        # commit can not be executed if there are instructions within the same transaction waiting in the queue
         for ins in self.instruction_queue:
             if (ins.transaction_id == transaction_id):
                 return False
@@ -80,18 +87,21 @@ class TwoPhaseLock:
         self.instruction_queue.append(instruction)
     
     def search_queue(self, transaction_id):
+        # search if there's any instructions within transaction_id waiting in the queue
         for ins in self.instruction_queue:
             if (ins.transaction_id == transaction_id):
                 return True
         return False
     
     def remove_from_queue(self, transaction_id):
+        # remove all instructions within transaction_id from the queue
         for _ in range(len(self.instruction_queue)):
             ins = self.instruction_queue.popleft()
             if (ins.transaction_id != transaction_id):
                 self.add_to_queue(ins)
 
     def execute_queue(self):
+        # execute instructions waiting in the queue
         instruction = self.instruction_queue.popleft()
         if (instruction.type=='read' or instruction.type=='write'):
             is_lock_acquired = self.acquire_lock(instruction)
@@ -119,25 +129,32 @@ class TwoPhaseLock:
             return is_commit, instruction
 
     def abort(self, transaction_id):
+        # abort mechanism
         instructions = self.schedule.get_logged_instructions(transaction_id)
         for ins in instructions:
             if (ins.type!='commit'):
+                # release locks
                 cnt = 0
                 if (ins in self.locks):
                     print(f"\trelease {self.locks[ins]} for {ins.item} on T{ins.transaction_id}")
                     self.release_lock(ins)
                     cnt+=1 
+            # remove instructions from executed instructions list
             if (ins in self.executed):
                 self.executed.remove(ins)
+        # remove waiting instructions from the queue
         self.remove_from_queue(transaction_id)
-        transaction = self.schedule.get_logged_instructions(transaction_id)
+        # adding all instructions within the transactions to the queue
+        transaction = self.schedule.get_logged_instructions(transaction_id) # executed instructions
         [self.add_to_queue(ins) for ins in transaction]
-        upcoming_ins = self.schedule.get_instructions(transaction_id)
+        upcoming_ins = self.schedule.get_instructions(transaction_id) # upcoming instructions
         [self.add_to_queue(ins) for ins in upcoming_ins]
         self.schedule.remove_instructions(transaction_id)
+        # clear the waiting list
         self.waiting_list[transaction_id] = []
     
     def get_executed_instructions(self, transaction_id):
+        # returns all executed instructions within transaction_id
         result = []
         for ins in self.executed:
             if (ins.transaction_id == transaction_id):
@@ -181,11 +198,11 @@ class TwoPhaseLock:
 
     def run(self):
         while (not self.schedule.instructions.empty() or len(self.instruction_queue)>0):
-            is_queue_exec = False
-            if (not is_queue_exec and not self.schedule.instructions.empty()):
+            if (not self.schedule.instructions.empty()):
                 current_instruction = self.execute_instruction()
                 print(f"Current instruction: {current_instruction}")
                 
+                # if there's any instructions within the same transaction waiting in queue, then the current instruction also added to the queue (waiting)
                 if (self.search_queue(current_instruction.transaction_id)):
                     self.add_to_queue(current_instruction)
                     print("Action\t\t:Waiting. Instruction added to queue")
@@ -215,6 +232,7 @@ class TwoPhaseLock:
                         self.print_waiting_list()
                         self.print_executed()
                         print("==================================================================")
+
                     elif (current_instruction.type=='commit'):
                         is_commit = self.commit(current_instruction)
                         if (is_commit):
@@ -222,10 +240,12 @@ class TwoPhaseLock:
                             cnt = 0
                             for ins in commit_instructions:
                                 if (ins.type!='commit'):
+                                    # release locks
                                     if (ins in self.locks):
                                         print(f"Action\t\t:release {self.locks[ins]} for {ins.item} on T{ins.transaction_id}")
                                         self.release_lock(ins)
                                 cnt+=1 
+                            # clear the waiting list
                             self.waiting_list[current_instruction.transaction_id] = []
 
                             self.executed.append(current_instruction)
@@ -252,6 +272,7 @@ if __name__ == '__main__':
     print('Two Phase Locking')
     print("==================================================================")
     
+    # receive input
     is_valid = False
     while (not is_valid):
         print("Input your schedule:")
