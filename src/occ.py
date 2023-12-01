@@ -89,7 +89,7 @@ class OCC:
                     tj.commit(self.schedule.current_timestamp-1)
                     print(f'[{tj.id}] startTS:{tj.start_ts}\tvalidationTS:{tj.validation_ts}\tfinishTS:{tj.finish_ts}')
                 else:
-                    print('tendang')
+                    print(f'rollback: {tj.id}')
                     self.schedule.rollback(tj.id)
                     processed.remove(tj.id)
             elif instruction.type == 'commit':
@@ -98,7 +98,7 @@ class OCC:
                 if valid:
                     tj.commit(self.schedule.current_timestamp-1)
                 else:
-                    print('tendang')
+                    print(f'rollback: {tj.id}')
                     self.schedule.rollback(tj.id)
                     processed.remove(tj.id)
 
@@ -115,10 +115,10 @@ if __name__ == '__main__':
     # sequence = input()
 
     # sequence = 'R1(b);R2(b);R2(a);W2(b);W2(a);R1(a);C1;C2'
-    sequence = 'R1(A);R2(A);W1(A);C1;C2'
+    # sequence = 'R1(A);R2(A);W1(A);C1;C2'
     # sequence = 'R1(A);W2(A);W2(B);W3(B);W1(A);C1;C2;C3'
     # sequence = 'R2(A);R1(A);W1(A);R2(B);W2(A);W1(B);C1;C2'
-    # sequence = 'R1(A);R2(A);R2(B);R3(B);W3(A);W2(A);W1(B);C3;C2;C1'
+    sequence = 'R1(A);R2(A);R2(B);R3(B);W3(A);W2(A);W1(B);C3;C2;C1'
     occ = OCC(sequence)
     # for q in occ.schedule.instructions.queue:
     #     print(q)
