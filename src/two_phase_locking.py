@@ -7,12 +7,14 @@ class TwoPhaseLock:
         self.schedule = Schedule()
         self.locks = {} # {'instruction': instruction, 'locktype': x_lock/s_lock}
         self.instruction_queue = deque([])
+        self.executed = Queue()
         # self.sequence = deque([]) # {"type": read/write/commit/aborted/tempwrite, "tx": transaction_number, "item": data_item}
 
     def __init__(self, input_sequence):
         self.schedule = Schedule(input_sequence)
         self.locks = {} # {'instruction': instruction, 'locktype': x_lock/s_lock}
         self.instruction_queue = deque([])
+        self.executed = Queue()
         # self.sequence = deque([]) # {"type": read/write/commit/aborted/tempwrite, "tx": transaction_number, "item": data_item}
 
     def add_schedule_instruction(self, instruction):
@@ -29,6 +31,10 @@ class TwoPhaseLock:
                 if (ins.item==item and ins.transaction_id!=transaction_id):
                     # if there's another transaction that holds a lock on the item, then x_lock is not available
                     return False
+                # elif (lock=='s_lock' and ins.item==ins.item and ins.transaction_id==transaction_id):
+                #     # self.upgrade_lock(transaction_id, item)
+                #     self.release_lock(ins)
+                #     return True
             else: # s_lock
                 if (lock=='x_lock' and ins.item==item and ins.transaction_id!=transaction_id):
                     # if there's another transaction that holds an x_lock on the item, then s_lock is not available
@@ -57,9 +63,19 @@ class TwoPhaseLock:
                 # self.print_queue()
                 return False
             self.locks[instruction] = 'x_lock'
+            for ins,lock in self.locks.items():
+                if (lock=='s_lock' and ins.transaction_id==instruction.transaction_id and ins.item==instruction.item):
+                    self.release_lock(ins)
+                    break
 
         # print(f"acquire {self.locks[instruction]} for {instruction.item} on T{instruction.transaction_id}")
         return True
+    
+    # def upgrade_lock(self, transaction_id, item):
+    #     for ins,lock in self.locks.items():
+    #         if (ins.transaction_id == transaction_id and ins.item == item and lock == 's_lock'):
+    #             self.locks.pop(ins)
+    #             break
 
     def release_lock(self, instruction):
         self.locks.pop(instruction)
@@ -91,6 +107,7 @@ class TwoPhaseLock:
             if (is_lock_acquired):
                 print(f"Current instruction: {instruction}")
                 print(f"Action: acquire {self.locks[instruction]} for {instruction.item} on T{instruction.transaction_id}")
+                self.executed.put(instruction)
             return is_lock_acquired
             #     self.instruction_queue.appendleft(instruction)
         elif (instruction.type=='commit'):
@@ -102,10 +119,12 @@ class TwoPhaseLock:
                 print("Action: ", end='')
                 for ins in commit_instructions:
                     if (ins.type!='commit'):
-                        print('\t' if cnt>0 else '', end='')
-                        print(f"release {self.locks[ins]} for {ins.item} on T{ins.transaction_id}")
-                        self.release_lock(ins)
-                    cnt+=1 
+                        if (ins in self.locks):
+                            print('\t' if cnt>0 else '', end='')
+                            print(f"release {self.locks[ins]} for {ins.item} on T{ins.transaction_id}")
+                            self.release_lock(ins)
+                            cnt+=1 
+                self.executed.put(instruction)
             return is_commit
             # if (not self.commit(instruction)):
             #     self.instruction_queue.appendleft(instruction)
@@ -128,6 +147,13 @@ class TwoPhaseLock:
             cnt+=1
         print(']')
 
+    def print_executed(self):
+        print('FINAL SCHEDULE: ', end='')
+        cnt = 0
+        for ins in list(self.executed.queue):
+            print(ins, end=';')
+            cnt+=1
+
     # def rollback(self):
 
     # def print_sequence(self):
@@ -136,10 +162,8 @@ class TwoPhaseLock:
         # print("\nType\tItem\tTx\tCCM")
         while (not self.schedule.instructions.empty() or len(self.instruction_queue)>0):
             is_queue_exec = False
-            print("==============")
             if (len(self.instruction_queue) > 0):
                 is_queue_exec = self.execute_queue()
-                # if (is_queue_exec):
                 #     print("Action: ", end='')
             if (not is_queue_exec and not self.schedule.instructions.empty()):
                 # print("ngga exec queue bng")
@@ -152,6 +176,7 @@ class TwoPhaseLock:
                         print(f"Action: {'s_lock' if current_instruction.type=='read' else 'x_lock'} not granted. Instruction added to queue")
                     else:
                         print(f"Action: acquire {self.locks[current_instruction]} for {current_instruction.item} on T{current_instruction.transaction_id}")
+                        self.executed.put(current_instruction)
                 elif (current_instruction.type=='commit'):
                     is_commit = self.commit(current_instruction)
                     if (is_commit):
@@ -160,24 +185,31 @@ class TwoPhaseLock:
                         # print("Action: ", end='')
                         for ins in commit_instructions:
                             if (ins.type!='commit'):
-                                print(f"Action: release {self.locks[ins]} for {ins.item} on T{ins.transaction_id}")
-                                self.release_lock(ins)
+                                # lock_type = 's_lock' if ins.type=='read' else 'x_lock'
+                                if (ins in self.locks):
+                                    print(f"Action: release {self.locks[ins]} for {ins.item} on T{ins.transaction_id}")
+                                    self.release_lock(ins)
                             cnt+=1 
+                        self.executed.put(current_instruction)
                     else:
                         print("Action: Not executed. Instruction added to queue")
+
             self.print_queue()
             self.print_locks()
+            print("=================")
 
             # print(self.schedule.rollbacked_list)
             # print(f"{current_instruction.type}\t{current_instruction.item}\tT{current_instruction.transaction_id}\t", end='')
             # print(f"acquire {self.locks[current_instruction]} for {current_instruction.item} on {current_instruction.transaction_id}" if (current_instruction.type=='read' or current_instruction.type=='write') else "")
-
+        
+        self.print_executed()
 
 if __name__ == '__main__':
     print('Two Phase Locking')
     print('=================')
     print('Input your schedule:')
     sequence = input()
+    print("=================")
     # input_pattern = re.compile(r'^[RW]\d+\([A-Z]\);?(?:[C]\d+;?)*$')
     
     # while (not input_pattern.match(sequence)):
