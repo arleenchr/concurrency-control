@@ -57,7 +57,7 @@ class TwoPhaseLock:
             if (not is_s_lock_avail[0]):
                 # lock not avail
                 self.instruction_queue.appendleft(instruction)
-                if (instruction.transaction_id not in self.waiting_list[is_x_lock_avail[1]]):
+                if (instruction.transaction_id not in self.waiting_list[is_s_lock_avail[1]]):
                     self.waiting_list[is_s_lock_avail[1]].append(instruction.transaction_id)
                 # print(f"s_lock not granted.")
                 # self.print_queue()
