@@ -6,7 +6,7 @@ from enums import TransactionValidationBasedPhase, InstructionType
 
 class TransactionOCC(Transaction):
     def __init__(self, start_ts: int, instructions: List[Instruction]) -> None:
-        super().__init__(start_ts, instructions)
+        super().__init__(str(start_ts), instructions)
         self.start_ts = start_ts
         self.validation_ts = None
         self.finish_ts = None
