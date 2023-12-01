@@ -29,7 +29,7 @@ class Schedule:
                 transaction = Transaction(tid, tins)
             elif(type == 'occ'):
                 transaction = TransactionOCC(tid, tins)
-            self.current_timestamp += 1
+            # self.current_timestamp += 1
             self.transactions.update({tid:transaction})
 
     
@@ -53,7 +53,7 @@ class Schedule:
     def execute_instruction(self):
         if(self.instructions.empty() and not self.rollbacked_list.empty()):
             transaction = self.transactions.get(self.rollbacked_list.get())
-            print(f'restart {transaction.id}')
+            print(f'Restart T{transaction.id}')
             if(self.type=='occ'):
                 transaction = TransactionOCC(transaction.id, transaction.instructions)
             for e in transaction.instructions:
@@ -63,7 +63,8 @@ class Schedule:
         if (instruction.transaction_id in self.rollbacked_list.queue):
             return self.execute_instruction()
         
-        print(f'{instruction} {self.current_timestamp}')
+        print(f'{self.current_timestamp}: {instruction}')
+
         self.current_timestamp += 1
         self.logging.put(instruction)
         return instruction
