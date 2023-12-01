@@ -97,6 +97,12 @@ class TwoPhaseLock:
 
     def add_to_queue(self, instruction):
         self.instruction_queue.append(instruction)
+    
+    def search_queue(self, transaction_id):
+        for ins in self.instruction_queue:
+            if (ins.transaction_id == transaction_id):
+                return True
+        return False
 
     def execute_queue(self):
         instruction = self.instruction_queue.popleft()
@@ -170,29 +176,34 @@ class TwoPhaseLock:
                 current_instruction = self.execute_instruction()
                 print(f"Current instruction: {current_instruction}")
                 # print("Action: ", end='')
-                if (current_instruction.type=='read' or current_instruction.type=='write'):
-                    is_lock_acquired = self.acquire_lock(current_instruction)
-                    if (not is_lock_acquired):
-                        print(f"Action: {'s_lock' if current_instruction.type=='read' else 'x_lock'} not granted. Instruction added to queue")
-                    else:
-                        print(f"Action: acquire {self.locks[current_instruction]} for {current_instruction.item} on T{current_instruction.transaction_id}")
-                        self.executed.put(current_instruction)
-                elif (current_instruction.type=='commit'):
-                    is_commit = self.commit(current_instruction)
-                    if (is_commit):
-                        commit_instructions = self.schedule.get_logged_instructions(current_instruction.transaction_id)
-                        cnt = 0
-                        # print("Action: ", end='')
-                        for ins in commit_instructions:
-                            if (ins.type!='commit'):
-                                # lock_type = 's_lock' if ins.type=='read' else 'x_lock'
-                                if (ins in self.locks):
-                                    print(f"Action: release {self.locks[ins]} for {ins.item} on T{ins.transaction_id}")
-                                    self.release_lock(ins)
-                            cnt+=1 
-                        self.executed.put(current_instruction)
-                    else:
-                        print("Action: Not executed. Instruction added to queue")
+
+                if (self.search_queue(current_instruction.transaction_id)):
+                    self.add_to_queue(current_instruction)
+                    print("Action: Waiting. Instruction added to queue")
+                else:
+                    if (current_instruction.type=='read' or current_instruction.type=='write'):
+                        is_lock_acquired = self.acquire_lock(current_instruction)
+                        if (not is_lock_acquired):
+                            print(f"Action: {'s_lock' if current_instruction.type=='read' else 'x_lock'} not granted. Instruction added to queue")
+                        else:
+                            print(f"Action: acquire {self.locks[current_instruction]} for {current_instruction.item} on T{current_instruction.transaction_id}")
+                            self.executed.put(current_instruction)
+                    elif (current_instruction.type=='commit'):
+                        is_commit = self.commit(current_instruction)
+                        if (is_commit):
+                            commit_instructions = self.schedule.get_logged_instructions(current_instruction.transaction_id)
+                            cnt = 0
+                            # print("Action: ", end='')
+                            for ins in commit_instructions:
+                                if (ins.type!='commit'):
+                                    # lock_type = 's_lock' if ins.type=='read' else 'x_lock'
+                                    if (ins in self.locks):
+                                        print(f"Action: release {self.locks[ins]} for {ins.item} on T{ins.transaction_id}")
+                                        self.release_lock(ins)
+                                cnt+=1 
+                            self.executed.put(current_instruction)
+                        else:
+                            print("Action: Not executed. Instruction added to queue")
 
             self.print_queue()
             self.print_locks()
