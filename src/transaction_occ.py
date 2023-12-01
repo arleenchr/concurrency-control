@@ -2,15 +2,15 @@ from transaction import Transaction
 from typing import List
 from instruction import Instruction
 from enums import TransactionValidationBasedPhase, InstructionType
-import time
+# from time import perf_counter_ns
 
 
 class TransactionOCC(Transaction):
     def __init__(self, id: str, instructions: List[Instruction]) -> None:
         super().__init__(id, instructions)
-        self.start_ts:float = time.time()
-        self.validation_ts:float = None
-        self.finish_ts:float = None
+        self.start_ts:int = None
+        self.validation_ts:int = None
+        self.finish_ts:int = None
         self.data_items_written = set()
         self.data_items_read = set()
         for instruction in self.instructions:
@@ -19,23 +19,34 @@ class TransactionOCC(Transaction):
             elif instruction.type == 'read':
                 self.data_items_read.add(instruction.item)
 
+
+    def start(self, current_timestamp) -> None:
+        self.start_ts = current_timestamp
+
     
-    def validate(self, transactions) -> bool:
-        self.validation_ts = time.time()
+    def validate(self, transactions, current_timestamp) -> bool:
+        self.validation_ts = current_timestamp
+        res = True
         for ti in transactions.values():
             if ti.id == self.id:
                 continue
             if ti.validation_ts and ti.validation_ts < self.validation_ts:
                 # TS(Ti) < TS(Tj)
-                if not(ti.finish_ts and ti.finish_ts < self.start_ts):
-                    return False
-                if not (ti.finish_ts and self.start_ts < ti.finish_ts < self.validation_ts and len(ti.data_items_written.intersection(self.data_items_read))==0):
+                if ti.finish_ts and ti.finish_ts < self.start_ts:
+                    # print('gala')
+                    pass
+                    # return False
+                elif ti.finish_ts and self.start_ts < ti.finish_ts < self.validation_ts and len(ti.data_items_written.intersection(self.data_items_read))==0:
+                    # print('galb')
+                    pass
+                    # return False
+                else:
                     return False
         return True
 
 
-    def commit(self) -> None:
-        self.finish_ts = time.time()
+    def commit(self, current_timestamp) -> None:
+        self.finish_ts = current_timestamp
 
 
 if __name__ == '__main__':
