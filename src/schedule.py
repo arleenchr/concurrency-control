@@ -20,6 +20,16 @@ class Instruction:
             self.type = 'commit'
             self.transaction_id = input_sequence[1]
             self.item = ''
+        
+    def __str__(self):
+        result = ''
+        if (self.type=='read'):
+            result += (f"R{self.transaction_id}({self.item})")
+        elif (self.type=='write'):
+            result += (f"W{self.transaction_id}({self.item})")
+        elif (self.type=='commit'):
+            result += (f"C{self.transaction_id}")
+        return result
 
 class Schedule:
     def __init__ (self):
