@@ -21,11 +21,12 @@ class Schedule:
             temp_transactions[input_instruction.transaction_id].append(input_instruction)
 
         self.transactions = []
-        for tid, tins in temp_transactions.items:
+        for tid, tins in temp_transactions.items():
             if(type == 'base'):
                 transaction = Transaction(tid, tins)
             elif(type == 'occ'):
                 transaction = TransactionOCC(tid, tins)
+            self.transactions.append(transaction)
 
     
     def add_transaction(self, transaction: Transaction) -> None:
@@ -54,3 +55,8 @@ class Schedule:
             if (instruction.transaction_id == transaction_id):
                 logged.append(instruction)
         return logged
+
+
+if __name__ == '__main__':
+    schedule = Schedule('R1(A);R2(A)', 'occ')
+    print(schedule.transactions[0].data_items_read)

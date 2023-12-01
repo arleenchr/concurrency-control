@@ -11,7 +11,7 @@ class TransactionOCC(Transaction):
         self.validation_ts = None
         self.finish_ts = None
         self.data_items_written = set()
-        self.data_items.read = set()
+        self.data_items_read = set()
         for instruction in self.instructions:
             if instruction.type == 'write':
                 self.data_items_written.add(instruction.item)
