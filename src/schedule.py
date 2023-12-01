@@ -1,4 +1,5 @@
 from queue import Queue
+from collections import deque
 from transaction import Transaction
 from transaction_occ import TransactionOCC
 from instruction import Instruction
@@ -7,9 +8,11 @@ from typing import List
 
 class Schedule:        
     def __init__ (self, input_sequence:str, type:str='base'):
+        self.current_timestamp = 0
         self.instructions = Queue() # list (queue) of instructions
         self.rollbacked_list = Queue() # list of transactions rollbacked
         self.logging = Queue() # list (queue) of final schedule
+        self.type = type
         # input_sequence: Rx(A);Wx(A);Cx;Rx(B);Cx
         input_list = input_sequence.split(";")
         temp_transactions = {}
@@ -26,6 +29,7 @@ class Schedule:
                 transaction = Transaction(tid, tins)
             elif(type == 'occ'):
                 transaction = TransactionOCC(tid, tins)
+            self.current_timestamp += 1
             self.transactions.update({tid:transaction})
 
     
@@ -37,11 +41,21 @@ class Schedule:
 
     def rollback(self, transaction_id):
         self.rollbacked_list.put(transaction_id)
+        logged = []
+        for log in list(self.logging.queue):
+            if log.transaction_id != transaction_id:
+                logged.append(log)
+        self.logging = Queue()
+        self.logging.queue = deque(logged)
+
 
 
     def execute_instruction(self):
         if(self.instructions.empty() and not self.rollbacked_list.empty()):
             transaction = self.transactions.get(self.rollbacked_list.get())
+            print(f'restart {transaction.id}')
+            if(self.type=='occ'):
+                transaction = TransactionOCC(transaction.id, transaction.instructions)
             for e in transaction.instructions:
                 self.instructions.put(e)
 
@@ -49,7 +63,8 @@ class Schedule:
         if (instruction.transaction_id in self.rollbacked_list.queue):
             return self.execute_instruction()
         
-        print(instruction)
+        print(f'{instruction} {self.current_timestamp}')
+        self.current_timestamp += 1
         self.logging.put(instruction)
         return instruction
     
